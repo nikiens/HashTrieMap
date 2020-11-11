@@ -189,7 +189,6 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
                 observer.setReplaced(getValue(dataIndex));
 
-                // либо root, либо inline
                 if (getNodeArity() == 0 && getPayloadArity() == 2) {
                     int dataMap = (shift == 0) ? this.dataMap ^ bitPos : bitPosition(hash, 0);
 
@@ -253,13 +252,9 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
             int dataIndex = 2 * index(dataMap, bitPos);
             int nodeIndex = contents.length - 1 - index(nodeMap, bitPos);
 
-            assert dataIndex <= nodeIndex;
-
             System.arraycopy(this.contents, 0, contents, 0, dataIndex);
             System.arraycopy(this.contents, dataIndex, contents, dataIndex + 2, nodeIndex - dataIndex);
             System.arraycopy(this.contents, nodeIndex + 1, contents, nodeIndex + 2, this.contents.length - nodeIndex - 1);
-
-            assert subNode != null;
 
             contents[dataIndex] = subNode.getKey(0);
             contents[dataIndex + 1] = subNode.getValue(0);
@@ -272,8 +267,6 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
             int dataIndex = 2 * index(dataMap, bitPos);
             int nodeIndex = contents.length - 1 - index(nodeMap, bitPos);
-
-            assert dataIndex <= nodeIndex;
 
             System.arraycopy(this.contents, 0, contents, 0, dataIndex);
             System.arraycopy(this.contents, dataIndex + 2, contents, dataIndex, nodeIndex - dataIndex);
@@ -383,8 +376,6 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         @SuppressWarnings("unchecked")
         @Override
         Node<K, V> insert(K key, V value, int hash, int shift, Observer<V> observer) {
-            assert this.hash == hash;
-
             for (int i = 0; i < keys.length; i++) {
                 if (keys[i].equals(key)) {
                     if (values[i].equals(value)) {
