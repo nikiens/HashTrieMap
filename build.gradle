@@ -1,0 +1,20 @@
+plugins {
+    id 'groovy'
+}
+
+group 'ru.nikiens'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile "org.codehaus.groovy:groovy-all:2.5.8"
+    testCompile platform("org.spockframework:spock-bom:2.0-M1-groovy-2.5")
+    testCompile "org.spockframework:spock-core"
+}
+
+test {
+    useJUnitPlatform()
+}
