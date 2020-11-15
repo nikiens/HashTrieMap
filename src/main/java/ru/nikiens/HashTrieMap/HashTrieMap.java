@@ -1,6 +1,9 @@
 package ru.nikiens.HashTrieMap;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         implements PersistentMap<K, V> {
@@ -24,22 +27,22 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         private boolean isModified;
         private V replaced;
 
-        public Observer() {
+        private Observer() {
         }
 
-        public boolean isModified() {
-            return isModified;
+        private boolean isModified() {
+            return this.isModified;
         }
 
-        public V getReplaced() {
-            return replaced;
+        private V getReplaced() {
+            return this.replaced;
         }
 
-        public void setModified() {
-            isModified = true;
+        private void setModified() {
+            this.isModified = true;
         }
 
-        public void setReplaced(V replaced) {
+        private void setReplaced(V replaced) {
             this.replaced = replaced;
             this.isModified = true;
         }
@@ -68,39 +71,39 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         private static final int PARTITION_OFFSET = 5;
         private static final int HASH_CODE_LENGTH = 32;
 
-        private final int dataMap;
+        private final int payloadMap;
         private final int nodeMap;
 
         private final Object[] contents;
 
-        private BitmapIndexedNode(int nodeMap,int dataMap, Object[] contents) {
-            this.dataMap = dataMap;
+        private BitmapIndexedNode(int nodeMap, int payloadMap, Object[] contents) {
+            this.payloadMap = payloadMap;
             this.nodeMap = nodeMap;
             this.contents = contents;
         }
 
-        static int mask(int hash, int shift) {
+        private static int mask(int hash, int shift) {
             return (hash >>> shift) & PARTITION_BITMASK;
         }
 
-        static int bitPosition(int hash, int shift) {
+        private static int bitPosition(int hash, int shift) {
             return 1 << mask(hash, shift);
         }
 
-        static int index(int bitmap, int bitPos) {
+        private static int index(int bitmap, int bitPos) {
             return Integer.bitCount(bitmap & (bitPos - 1));
         }
 
-        int getNodeArity() {
+        private int getNodeArity() {
             return Integer.bitCount(nodeMap);
         }
 
-        int getPayloadArity() {
-            return 2 * Integer.bitCount(dataMap);
+        private int getPayloadArity() {
+            return 2 * Integer.bitCount(payloadMap);
         }
 
         @SuppressWarnings("unchecked")
-        Node<K, V> getNode(int index) {
+        private Node<K, V> getNode(int index) {
             return (Node<K, V>) contents[contents.length - 1 - index];
         }
 
@@ -120,8 +123,8 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         V find(K key, int hash, int shift) {
             int bitPos = bitPosition(hash, shift);
 
-            if ((bitPos & dataMap) != 0) {
-                int index = index(dataMap, bitPos);
+            if ((bitPos & payloadMap) != 0) {
+                int index = index(payloadMap, bitPos);
 
                 return (getKey(index) == key) ? getValue(index) : null;
             }
@@ -150,21 +153,21 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         Node<K, V> insert(K key, V value, int hash, int shift, Observer<V> observer) {
             int bitPos = bitPosition(hash, shift);
 
-            if ((bitPos & dataMap) != 0) {
-                int index = index(dataMap, bitPos);
+            if ((bitPos & payloadMap) != 0) {
+                int payloadIndex = index(payloadMap, bitPos);
 
-                if (getKey(index) == key) {
-                    observer.setReplaced(getValue(index));
+                if (getKey(payloadIndex) == key) {
+                    observer.setReplaced(getValue(payloadIndex));
 
-                    return insertValue(getValue(index), bitPos);
+                    return insertValue(getValue(payloadIndex), bitPos);
                 }
 
-                int hash1 = getKey(index).hashCode();
+                int hash1 = getKey(payloadIndex).hashCode();
                 BitmapIndexedNode<K,V> subNode = (BitmapIndexedNode<K, V>)
-                        merge(key, value, getKey(index), getValue(index), hash, hash1, shift + PARTITION_OFFSET);
+                        merge(key, value, getKey(payloadIndex), getValue(payloadIndex), hash, hash1, shift + PARTITION_OFFSET);
 
                 observer.setModified();
-                return uninlineNode(subNode, bitPos);
+                return uninlineValue(subNode, bitPos);
             }
 
             if ((bitPos & nodeMap) != 0) {
@@ -180,21 +183,21 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         @Override
         Node<K, V> delete(K key, int hash, int shift, Observer<V> observer) {
             int bitPos = bitPosition(hash, shift);
-            int dataIndex = index(dataMap, bitPos);
+            int payloadIndex = index(payloadMap, bitPos);
 
-            if ((bitPos & dataMap) != 0) {
-                if (!getKey(dataIndex).equals(key)) {
+            if ((bitPos & payloadMap) != 0) {
+                if (!getKey(payloadIndex).equals(key)) {
                     return this;
                 }
 
-                observer.setReplaced(getValue(dataIndex));
+                observer.setReplaced(getValue(payloadIndex));
 
                 if (getNodeArity() == 0 && getPayloadArity() == 2) {
-                    int dataMap = (shift == 0) ? this.dataMap ^ bitPos : bitPosition(hash, 0);
+                    int payloadMap = (shift == 0) ? this.payloadMap ^ bitPos : bitPosition(hash, 0);
 
-                    return (dataIndex == 0)
-                            ? new BitmapIndexedNode<>(0, dataMap, new Object[]{getKey(1), getValue(1)})
-                            : new BitmapIndexedNode<>(0, dataMap, new Object[]{getKey(0), getValue(0)});
+                    return (payloadIndex == 0)
+                            ? new BitmapIndexedNode<>(0, payloadMap, new Object[]{getKey(1), getValue(1)})
+                            : new BitmapIndexedNode<>(0, payloadMap, new Object[]{getKey(0), getValue(0)});
                 } else {
                     return deleteEntry(bitPos);
                 }
@@ -210,7 +213,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
                         case ONE: {
                             return (getPayloadArity() == 0 && getNodeArity() == 1)
-                                    ? subNode : inlineNode(subNode, bitPos);
+                                    ? subNode : inlineValue(subNode, bitPos);
                         }
                         case MORE: {
                             return insertNode(subNode, bitPos);
@@ -218,81 +221,77 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                     }
                 }
             }
-
             return this;
         }
 
         private BitmapIndexedNode<K,V> insertEntry(K key, V value, int bitPos) {
-            int index = 2 * index(dataMap, bitPos);
+            int payloadIndex = 2 * index(payloadMap, bitPos);
+
             Object[] contents = new Object[this.contents.length + 2];
+            System.arraycopy(this.contents, 0, contents, 0, payloadIndex);
+            System.arraycopy(this.contents, payloadIndex, contents, payloadIndex + 2, this.contents.length - payloadIndex);
 
-            System.arraycopy(this.contents, 0, contents, 0, index);
-            System.arraycopy(this.contents, index, contents, index + 2, this.contents.length - index);
+            contents[payloadIndex] = key;
+            contents[payloadIndex + 1] = value;
 
-            contents[index] = key;
-            contents[index + 1] = value;
-
-            return new BitmapIndexedNode<>(nodeMap, dataMap | bitPos, contents);
+            return new BitmapIndexedNode<>(nodeMap, payloadMap | bitPos, contents);
         }
 
         private BitmapIndexedNode<K, V> deleteEntry(int bitPos) {
-            int index = 2 * index(dataMap, bitPos);
+            int payloadIndex = 2 * index(payloadMap, bitPos);
+
             Object[] contents = new Object[this.contents.length - 2];
+            System.arraycopy(this.contents, 0, contents, 0, payloadIndex);
+            System.arraycopy(this.contents, payloadIndex + 2, contents, payloadIndex, this.contents.length - payloadIndex - 2);
 
-            System.arraycopy(this.contents, 0, contents, 0, index);
-            System.arraycopy(this.contents, index + 2, contents, index, this.contents.length - index - 2);
-
-            return new BitmapIndexedNode<>(nodeMap, dataMap ^ bitPos, contents);
+            return new BitmapIndexedNode<>(nodeMap, payloadMap ^ bitPos, contents);
         }
 
-
-        private BitmapIndexedNode<K, V> inlineNode(BitmapIndexedNode<K, V> subNode, int bitPos) {
-            Object[] contents = new Object[this.contents.length + 1];
-
-            int dataIndex = 2 * index(dataMap, bitPos);
+        private BitmapIndexedNode<K, V> inlineValue(BitmapIndexedNode<K, V> subNode, int bitPos) {
+            int payloadIndex = 2 * index(payloadMap, bitPos);
             int nodeIndex = contents.length - 1 - index(nodeMap, bitPos);
 
-            System.arraycopy(this.contents, 0, contents, 0, dataIndex);
-            System.arraycopy(this.contents, dataIndex, contents, dataIndex + 2, nodeIndex - dataIndex);
+            Object[] contents = new Object[this.contents.length + 1];
+            System.arraycopy(this.contents, 0, contents, 0, payloadIndex);
+            System.arraycopy(this.contents, payloadIndex, contents, payloadIndex + 2, nodeIndex - payloadIndex);
             System.arraycopy(this.contents, nodeIndex + 1, contents, nodeIndex + 2, this.contents.length - nodeIndex - 1);
 
-            contents[dataIndex] = subNode.getKey(0);
-            contents[dataIndex + 1] = subNode.getValue(0);
+            contents[payloadIndex] = subNode.getKey(0);
+            contents[payloadIndex + 1] = subNode.getValue(0);
 
-            return new BitmapIndexedNode<>(nodeMap ^ bitPos, dataMap | bitPos, contents);
+            return new BitmapIndexedNode<>(nodeMap ^ bitPos, payloadMap | bitPos, contents);
         }
 
-        private BitmapIndexedNode<K,V> uninlineNode(BitmapIndexedNode<K,V> subNode, int bitPos) {
-            Object[] contents = new Object[this.contents.length - 1];
-
-            int dataIndex = 2 * index(dataMap, bitPos);
+        private BitmapIndexedNode<K,V> uninlineValue(BitmapIndexedNode<K,V> subNode, int bitPos) {
+            int payloadIndex = 2 * index(payloadMap, bitPos);
             int nodeIndex = contents.length - 1 - index(nodeMap, bitPos);
 
-            System.arraycopy(this.contents, 0, contents, 0, dataIndex);
-            System.arraycopy(this.contents, dataIndex + 2, contents, dataIndex, nodeIndex - dataIndex);
+            Object[] contents = new Object[this.contents.length - 1];
+            System.arraycopy(this.contents, 0, contents, 0, payloadIndex);
+            System.arraycopy(this.contents, payloadIndex + 2, contents, payloadIndex, nodeIndex - payloadIndex);
             System.arraycopy(this.contents, nodeIndex + 2, contents, nodeIndex + 1, this.contents.length - nodeIndex - 2);
 
             contents[nodeIndex] = subNode;
 
-            return new BitmapIndexedNode<>(nodeMap | bitPos, dataMap ^ bitPos, contents);
+            return new BitmapIndexedNode<>(nodeMap | bitPos, payloadMap ^ bitPos, contents);
         }
 
         private BitmapIndexedNode<K,V> insertValue(V value, int bitPos) {
-            int index = 2 * index(nodeMap, bitPos) + 1;
+            int valueIndex = 2 * index(nodeMap, bitPos) + 1;
 
             Object[] contents = this.contents.clone();
-            contents[index] = value;
+            contents[valueIndex] = value;
 
-            return new BitmapIndexedNode<>(nodeMap, dataMap, contents);
+            return new BitmapIndexedNode<>(nodeMap, payloadMap, contents);
         }
 
         private BitmapIndexedNode<K, V> insertNode(BitmapIndexedNode<K, V> node, int bitPos) {
-            int index = contents.length - 1 - index(nodeMap, bitPos);
+            int nodeIndex = contents.length - 1 - index(nodeMap, bitPos);
 
             Object[] contents = this.contents.clone();
-            contents[index] = node;
+            contents[nodeIndex] = node;
 
-            return new BitmapIndexedNode<>(nodeMap, dataMap, contents);
+            return new BitmapIndexedNode<>(nodeMap, payloadMap, contents);
         }
 
         @SuppressWarnings("unchecked")
@@ -322,14 +321,14 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             BitmapIndexedNode<?, ?> that = (BitmapIndexedNode<?, ?>) o;
-            return dataMap == that.dataMap &&
+            return payloadMap == that.payloadMap &&
                     nodeMap == that.nodeMap &&
                     Arrays.equals(contents, that.contents);
         }
 
         @Override
         public int hashCode() {
-            int result = Objects.hash(dataMap, nodeMap);
+            int result = Objects.hash(payloadMap, nodeMap);
             result = 31 * result + Arrays.hashCode(contents);
             return result;
         }
@@ -423,11 +422,10 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                     }
 
                     K[] keys = (K[]) new Object[this.keys.length - 1];
-                    V[] values = (V[]) new Object[this.values.length - 1];
-
                     System.arraycopy(this.keys, 0,     keys, 0, i);
                     System.arraycopy(this.keys, i + 1, keys, i, keys.length - i - 1);
 
+                    V[] values = (V[]) new Object[this.values.length - 1];
                     System.arraycopy(this.values, 0,     values, 0, i);
                     System.arraycopy(this.values, i + 1, values, i, keys.length - i - 1);
 
