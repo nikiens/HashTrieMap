@@ -20,7 +20,6 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
     private static final class Observer<V> {
         private boolean isModified;
-        private V replaced;
 
         private Observer() {
         }
@@ -29,16 +28,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
             return this.isModified;
         }
 
-        private V getReplaced() {
-            return this.replaced;
-        }
-
         private void setModified() {
-            this.isModified = true;
-        }
-
-        private void setReplaced(V replaced) {
-            this.replaced = replaced;
             this.isModified = true;
         }
     }
@@ -98,7 +88,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         }
 
         @SuppressWarnings("unchecked")
-        Node<K, V> getNode(int index) {
+        private Node<K, V> getNode(int index) {
             return (Node<K, V>) contents[contents.length - 1 - index];
         }
 
@@ -152,7 +142,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
             if ((bitPos & payloadMap) != 0) {
                 if (getKey(payloadIndex) == key) {
-                    observer.setReplaced(getValue(payloadIndex));
+                    observer.setModified();
 
                     Object[] modified = copyAndModifyContents(Operation.INSERT_VALUE, bitPos);
                     modified[payloadIndex + 1] = getValue(payloadIndex);
@@ -205,7 +195,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                     return this;
                 }
 
-                observer.setReplaced(getValue(payloadIndex));
+                observer.setModified();
 
                 if (getNodeArity() == 0 && getPayloadArity() == 2) {
                     int payloadMap = (shift == 0) ? this.payloadMap ^ bitPos : bitPosition(hash, 0);
@@ -384,7 +374,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                         V[] newValues = values.clone();
                         newValues[i] = value;
 
-                        observer.setReplaced(value);
+                        observer.setModified();
                         return new HashCollisionNode<>(keys, newValues, hash);
                     }
                 }
@@ -408,7 +398,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         Node<K, V> delete(K key, int hash, int shift, Observer<V> observer) {
             for (int i = 0; i < keys.length; i++) {
                 if (keys[i].equals(key)) {
-                    observer.setReplaced(values[i]);
+                    observer.setModified();
 
                     if (keys.length == 1) {
                         return new BitmapIndexedNode<>(0, 0, new Object[0]);
@@ -469,7 +459,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
         Node<K,V> root = this.root.insert(k, v, keyHash, 0, observer);
 
-        return (!observer.isModified()) ? this : new HashTrieMap<>(root, size + 1);
+        return !observer.isModified() ? this : new HashTrieMap<>(root, size + 1);
     }
 
     @Override
@@ -481,7 +471,8 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         @SuppressWarnings("unchecked")
         Node<K,V> root = this.root.delete((K) o, keyHash, 0, observer);
 
-        return (!observer.isModified()) ? this : new HashTrieMap<>(root, size - 1);
+
+        return !observer.isModified() ? this : new HashTrieMap<>(root, size - 1);
     }
 
     @Override
