@@ -18,7 +18,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         this.root = new BitmapIndexedNode<>(0, 0, new Object[0]);
     }
 
-    private static final class Observer<V> {
+    private static final class Observer {
         private boolean isModified;
 
         private Observer() {
@@ -40,9 +40,9 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
         abstract V find(K key, int hash, int shift);
 
-        abstract Node<K, V> insert(K key, V value, int hash, int shift, Observer<V> observer);
+        abstract Node<K, V> insert(K key, V value, int hash, int shift, Observer observer);
 
-        abstract Node<K, V> delete(K key, int hash, int shift, Observer<V> observer);
+        abstract Node<K, V> delete(K key, int hash, int shift, Observer observer);
 
         abstract K getKey(int index);
 
@@ -135,7 +135,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         }
 
         @Override
-        Node<K, V> insert(K key, V value, int hash, int shift, Observer<V> observer) {
+        Node<K, V> insert(K key, V value, int hash, int shift, Observer observer) {
             int bitPos = bitPosition(hash, shift);
             int payloadIndex = 2 * index(payloadMap, bitPos);
             int nodeIndex = contents.length - 1 - index(nodeMap, bitPos);
@@ -185,7 +185,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         }
 
         @Override
-        Node<K, V> delete(K key, int hash, int shift, Observer<V> observer) {
+        Node<K, V> delete(K key, int hash, int shift, Observer observer) {
             int bitPos = bitPosition(hash, shift);
             int payloadIndex = index(payloadMap, bitPos);
             int nodeIndex = contents.length - 1 - index(nodeMap, bitPos);
@@ -365,7 +365,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
         @SuppressWarnings("unchecked")
         @Override
-        Node<K, V> insert(K key, V value, int hash, int shift, Observer<V> observer) {
+        Node<K, V> insert(K key, V value, int hash, int shift, Observer observer) {
             for (int i = 0; i < keys.length; i++) {
                 if (keys[i].equals(key)) {
                     if (values[i].equals(value)) {
@@ -395,7 +395,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
         @SuppressWarnings("unchecked")
         @Override
-        Node<K, V> delete(K key, int hash, int shift, Observer<V> observer) {
+        Node<K, V> delete(K key, int hash, int shift, Observer observer) {
             for (int i = 0; i < keys.length; i++) {
                 if (keys[i].equals(key)) {
                     observer.setModified();
@@ -409,7 +409,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                         V value1 = (i == 0) ? values[1] : values[0];
 
                         return (Node<K, V>) new BitmapIndexedNode<>(0, 0, new Object[0])
-                                .insert(key1, value1, key1.hashCode(), 0, (Observer<Object>) observer);
+                                .insert(key1, value1, key1.hashCode(), 0, observer);
                     }
 
                     K[] keys = (K[]) new Object[this.keys.length - 1];
@@ -453,7 +453,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
     @Override
     public PersistentMap<K, V> insert(K k, V v) {
-        Observer<V> observer = new Observer<>();
+        Observer observer = new Observer();
 
         int keyHash = k.hashCode();
 
@@ -464,7 +464,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
     @Override
     public PersistentMap<K, V> delete(Object o) {
-        Observer<V> observer = new Observer<>();
+        Observer observer = new Observer();
 
         int keyHash = o.hashCode();
 
