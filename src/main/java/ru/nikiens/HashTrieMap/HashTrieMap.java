@@ -8,12 +8,10 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
     private final Node<K,V> root;
 
     private int size;
-    private int hash;
 
-    private HashTrieMap(Node<K, V> root, int size, int hash) {
+    private HashTrieMap(Node<K, V> root, int size) {
         this.root = root;
         this.size = size;
-        this.hash = hash;
     }
 
     public HashTrieMap() {
@@ -100,7 +98,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         }
 
         @SuppressWarnings("unchecked")
-        private Node<K, V> getNode(int index) {
+        Node<K, V> getNode(int index) {
             return (Node<K, V>) contents[contents.length - 1 - index];
         }
 
@@ -443,7 +441,9 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             HashCollisionNode<?, ?> that = (HashCollisionNode<?, ?>) o;
-            return hash == that.hash && Arrays.equals(keys, that.keys);
+            return hash == that.hash &&
+                    Arrays.equals(keys, that.keys) &&
+                    Arrays.equals(values, that.values);
         }
 
         @Override
@@ -469,22 +469,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
         Node<K,V> root = this.root.insert(k, v, keyHash, 0, observer);
 
-        if (!observer.isModified()) {
-            return this;
-        }
-
-        V replaced = observer.getReplaced();
-        int valueHash = v.hashCode();
-
-        if (replaced == null) {
-            int hash = this.hash + (keyHash ^ valueHash);
-
-            return new HashTrieMap<>(root, size, hash);
-        }
-
-        int hash = this.hash + (keyHash ^ valueHash) - (keyHash ^ replaced.hashCode());
-
-        return new HashTrieMap<>(root, size + 1, hash);
+        return (!observer.isModified()) ? this : new HashTrieMap<>(root, size + 1);
     }
 
     @Override
@@ -496,12 +481,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         @SuppressWarnings("unchecked")
         Node<K,V> root = this.root.delete((K) o, keyHash, 0, observer);
 
-        V replaced = observer.getReplaced();
-
-        if (replaced == null) {
-            return this;
-        }
-        return new HashTrieMap<>(root, size - 1, hash - (keyHash ^ replaced.hashCode()));
+        return (!observer.isModified()) ? this : new HashTrieMap<>(root, size - 1);
     }
 
     @Override
@@ -527,13 +507,12 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         if (!super.equals(o)) return false;
         HashTrieMap<?, ?> that = (HashTrieMap<?, ?>) o;
         return size == that.size &&
-                hash == that.hash &&
-                Objects.equals(root, that.root);
+                root.equals(that.root);
     }
 
     @Override
     public int hashCode() {
-        return hash;
+        return Objects.hash(super.hashCode(), root, size);
     }
 
     @Override
