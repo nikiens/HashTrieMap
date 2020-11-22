@@ -499,6 +499,17 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         return !observer.isModified() ? this : new HashTrieMap<>(root, size - 1);
     }
 
+    @Override
+    public PersistentMap<K, V> insertAll(Map<? extends K, ? extends V> map) {
+        PersistentMap<K,V> dst = new HashTrieMap<>();
+
+        for(Entry<? extends K, ? extends V> entry : map.entrySet()) {
+            dst = dst.insert(entry.getKey(), entry.getValue());
+        }
+
+        return dst;
+    }
+
     /* ---------------- Iterator ---------------- */
 
     public class HashTrieIterator implements Iterator<Map.Entry<K, V>> {
