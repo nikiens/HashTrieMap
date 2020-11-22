@@ -29,4 +29,15 @@ public abstract class AbstractPersistentMap<K,V> extends AbstractMap<K,V>
     public final void clear() {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public PersistentMap<K, V> insertAll(Map<? extends K, ? extends V> map) {
+        PersistentMap<K,V> dst = new HashTrieMap<>();
+
+        for(Entry<? extends K, ? extends V> entry : map.entrySet()) {
+            dst = dst.insert(entry.getKey(), entry.getValue());
+        }
+
+        return dst;
+    }
 }
