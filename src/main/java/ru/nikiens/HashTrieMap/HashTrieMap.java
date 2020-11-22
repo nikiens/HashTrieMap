@@ -120,6 +120,16 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         }
 
         @Override
+        int getNodeArity() {
+            return Integer.bitCount(nodeMap);
+        }
+
+        @Override
+        int getPayloadArity() {
+            return Integer.bitCount(payloadMap);
+        }
+
+        @Override
         Size sizePredicate() {
             if (getNodeArity() != 0) {
                 return Size.MORE;
@@ -133,16 +143,6 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                 default:
                     return Size.MORE;
             }
-        }
-
-        @Override
-        int getNodeArity() {
-            return Integer.bitCount(nodeMap);
-        }
-
-        @Override
-        int getPayloadArity() {
-            return 2 * Integer.bitCount(payloadMap);
         }
 
         @Override
@@ -162,7 +162,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
                 }
 
-                int hash1 = getKey(payloadIndex).hashCode();
+                int hash1 = (getKey(payloadIndex) == null) ? 0 : getKey(payloadIndex).hashCode();
                 BitmapIndexedNode<K, V> subNode = (BitmapIndexedNode<K, V>)
                         merge(key, value, getKey(payloadIndex), getValue(payloadIndex), hash, hash1, shift + PARTITION_OFFSET);
 
@@ -232,7 +232,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                             throw new IllegalStateException();
 
                         case ONE: {
-                            if (!(getPayloadArity() == 0 && getNodeArity() == 1)) {
+                            if (!(getPayloadArity() == 0 && getNodeArity() == 2)) {
                                 Object[] modified = copyAndModifyContents(Operation.INLINE_ENTRY, bitPos);
                                 modified[payloadIndex] = subNode.getKey(0);
                                 modified[payloadIndex + 1] = subNode.getValue(0);
@@ -484,7 +484,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
         Node<K, V> root = this.root.insert(k, v, hash, 0, observer);
 
-        return !observer.isModified() ? this : new HashTrieMap<>(root, size + 1);
+        return (!observer.isModified()) ? this : new HashTrieMap<>(root, size + 1);
     }
 
     @Override
@@ -496,7 +496,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         @SuppressWarnings("unchecked")
         Node<K, V> root = this.root.delete((K) o, hash, 0, observer);
 
-        return !observer.isModified() ? this : new HashTrieMap<>(root, size - 1);
+        return (!observer.isModified()) ? this : new HashTrieMap<>(root, size - 1);
     }
 
     @Override
@@ -512,28 +512,21 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
     /* ---------------- Iterator ---------------- */
 
-    private class HashTrieIterator implements Iterator<Map.Entry<K, V>> {
+    private class EntryIterator implements Iterator<Map.Entry<K, V>> {
         private final Deque<Node<K, V>> nodes = new ArrayDeque<>();
-        private Node<K, V> currentPayloadNode;
+        private Node<K, V> currentPayloadNode = root;
 
         private int currentEntryIndex;
         private int currentNodeIndex;
 
-        private HashTrieIterator() {
+        private EntryIterator() {
             nodes.push(root);
-
-            if (root.getPayloadArity() != 0) {
-                currentPayloadNode = root;
-            }
         }
 
         private boolean advanceToNextPayloadNode() {
-            Node<K, V> current = nodes.peek();
-
             while (!nodes.isEmpty()) {
-                if (currentNodeIndex < current.getNodeArity()) {
-                    Node<K, V> next = current.getNode(currentNodeIndex);
-                    currentNodeIndex++;
+                if (currentNodeIndex < nodes.peek().getNodeArity()) {
+                    Node<K, V> next = nodes.peek().getNode(currentNodeIndex++);
 
                     if (next.getNodeArity() != 0) {
                         nodes.push(next);
@@ -546,7 +539,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                         return true;
                     }
                 }
-                nodes.remove();
+                nodes.removeLast();
                 currentNodeIndex = 0;
             }
             return false;
@@ -554,12 +547,14 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
         @Override
         public boolean hasNext() {
-            return currentEntryIndex < currentPayloadNode.getPayloadArity() / 2
+            return currentEntryIndex < currentPayloadNode.getPayloadArity()
                     || advanceToNextPayloadNode();
         }
 
         @Override
         public Entry<K, V> next() {
+            if (!hasNext()) throw new NoSuchElementException();
+
             return new AbstractMap.SimpleImmutableEntry<>(
                     currentPayloadNode.getKey(currentEntryIndex),
                     currentPayloadNode.getValue(currentEntryIndex++)
@@ -580,7 +575,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
     private class EntrySet extends AbstractSet<Map.Entry<K, V>> {
         @Override
         public Iterator<Entry<K, V>> iterator() {
-            return new HashTrieIterator();
+            return new EntryIterator();
         }
 
         @Override
