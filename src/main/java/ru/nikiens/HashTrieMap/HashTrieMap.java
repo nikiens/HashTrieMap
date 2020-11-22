@@ -512,7 +512,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
     /* ---------------- Iterator ---------------- */
 
-    public class HashTrieIterator implements Iterator<Map.Entry<K, V>> {
+    private class HashTrieIterator implements Iterator<Map.Entry<K, V>> {
         private final Deque<Node<K, V>> nodes = new ArrayDeque<>();
         private Node<K, V> currentPayloadNode;
 
