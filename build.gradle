@@ -1,5 +1,5 @@
 plugins {
-    id 'groovy'
+    id 'java'
 }
 
 group 'ru.nikiens'
@@ -10,11 +10,9 @@ repositories {
 }
 
 dependencies {
-    testCompile "org.codehaus.groovy:groovy-all:2.5.8"
-    testCompile platform("org.spockframework:spock-bom:2.0-M1-groovy-2.5")
-    testCompile "org.spockframework:spock-core"
-}
+    testCompile 'junit:junit:4.12'
+    testCompile group: 'com.google.guava', name: 'guava-testlib', version: '28.0-jre'}
 
 test {
-    useJUnitPlatform()
+    useJUnit()
 }

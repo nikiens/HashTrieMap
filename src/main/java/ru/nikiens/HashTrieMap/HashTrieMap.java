@@ -113,23 +113,6 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         }
 
         @Override
-        V find(K key, int hash, int shift) {
-            int bitPos = bitPosition(hash, shift);
-
-            if ((bitPos & payloadMap) != 0) {
-                int index = index(payloadMap, bitPos);
-
-                return (getKey(index) == key) ? getValue(index) : null;
-            }
-
-            if ((bitPos & nodeMap) != 0) {
-                return getNode(index(nodeMap, bitPos)).find(key, hash, shift + PARTITION_OFFSET);
-            }
-
-            return null;
-        }
-
-        @Override
         int getNodeArity() {
             return Integer.bitCount(nodeMap);
         }
@@ -153,6 +136,23 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                 default:
                     return Size.MORE;
             }
+        }
+
+        @Override
+        V find(K key, int hash, int shift) {
+            int bitPos = bitPosition(hash, shift);
+
+            if ((bitPos & payloadMap) != 0) {
+                int index = index(payloadMap, bitPos);
+
+                return (getKey(index) == key) ? getValue(index) : null;
+            }
+
+            if ((bitPos & nodeMap) != 0) {
+                return getNode(index(nodeMap, bitPos)).find(key, hash, shift + PARTITION_OFFSET);
+            }
+
+            return null;
         }
 
         @Override
@@ -597,28 +597,11 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
     @SuppressWarnings("unchecked")
     @Override
     public V get(Object key) {
-        return root.find((K) key, key.hashCode(), 0);
+        return root.find((K) key, (key == null) ? 0 :key.hashCode(), 0);
     }
 
     @Override
     public int size() {
         return size;
-    }
-
-    /* ---------------- Objects API -------------- */
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        HashTrieMap<?, ?> that = (HashTrieMap<?, ?>) o;
-        return size == that.size &&
-                root.equals(that.root);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), root, size);
     }
 }
