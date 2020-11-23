@@ -1,6 +1,15 @@
 package ru.nikiens.HashTrieMap;
 
-import java.util.*;
+Simport java.util.AbstractMap;
+import java.util.AbstractSet;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Set;
 
 public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         implements PersistentMap<K, V> {
@@ -148,7 +157,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         @Override
         Node<K, V> insert(K key, V value, int hash, int shift, Observer observer) {
             int bitPos = bitPosition(hash, shift);
-            int payloadIndex = 2 * index(payloadMap, bitPos);
+            int payloadIndex = index(payloadMap, bitPos);
             int nodeIndex = contents.length - 1 - index(nodeMap, bitPos);
 
             if ((bitPos & payloadMap) != 0) {
@@ -156,7 +165,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                     observer.setModified();
 
                     Object[] modified = copyAndModifyContents(Operation.INSERT_VALUE, bitPos);
-                    modified[payloadIndex + 1] = getValue(payloadIndex);
+                    modified[2 * payloadIndex + 1] = getValue(payloadIndex);
 
                     return new BitmapIndexedNode<>(nodeMap, payloadMap, modified);
 
@@ -191,8 +200,8 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
             observer.setModified();
 
             Object[] modified = copyAndModifyContents(Operation.INSERT_ENTRY, bitPos);
-            modified[payloadIndex] = key;
-            modified[payloadIndex + 1] = value;
+            modified[2* payloadIndex] = key;
+            modified[2* payloadIndex + 1] = value;
 
             return new BitmapIndexedNode<>(nodeMap, payloadMap | bitPos, modified);
         }
@@ -315,7 +324,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                 return new BitmapIndexedNode<>(bitPosition(hash1, shift), 0, new Object[]{subNode});
             }
 
-            int dataMap = bitPosition(mask1, shift) | bitPosition(mask2, shift);
+            int dataMap = bitPosition(hash1, shift) | bitPosition(hash2, shift);
 
             return (mask1 < mask2)
                     ? new BitmapIndexedNode<>(0, dataMap, new Object[]{key1, value1, key2, value2})
@@ -429,11 +438,11 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                 if (keys[i].equals(key)) {
                     observer.setModified();
 
-                    if (keys.length == 1) {
+                    if (getPayloadArity() == 1) {
                         return new BitmapIndexedNode<>(0, 0, new Object[0]);
                     }
 
-                    if (keys.length == 2) {
+                    if (getPayloadArity() == 2) {
                         K key1 = (i == 0) ? keys[1] : keys[0];
                         V value1 = (i == 0) ? values[1] : values[0];
 
@@ -441,7 +450,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                                 .insert(key1, value1, key1.hashCode(), 0, observer);
                     }
 
-                    K[] keys = (K[]) new Object[this.keys.length - 1];
+                    K[] keys = (K[]) new Object[getPayloadArity() - 1];
                     System.arraycopy(this.keys, 0, keys, 0, i);
                     System.arraycopy(this.keys, i + 1, keys, i, keys.length - i - 1);
 
@@ -525,8 +534,8 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
         private boolean advanceToNextPayloadNode() {
             while (!nodes.isEmpty()) {
-                if (currentNodeIndex < nodes.peek().getNodeArity()) {
-                    Node<K, V> next = nodes.peek().getNode(currentNodeIndex++);
+                if (currentNodeIndex < nodes.getLast().getNodeArity()) {
+                    Node<K, V> next = nodes.getLast().getNode(currentNodeIndex++);
 
                     if (next.getNodeArity() != 0) {
                         nodes.push(next);
