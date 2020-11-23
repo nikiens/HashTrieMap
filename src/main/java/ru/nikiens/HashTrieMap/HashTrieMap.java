@@ -1,6 +1,6 @@
 package ru.nikiens.HashTrieMap;
 
-Simport java.util.AbstractMap;
+import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayDeque;
 import java.util.Arrays;
