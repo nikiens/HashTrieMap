@@ -15,7 +15,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         implements PersistentMap<K, V> {
 
     private final Node<K, V> root;
-    private int size;
+    private final int size;
 
     private HashTrieMap(Node<K, V> root, int size) {
         this.root = root;
@@ -24,6 +24,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
     public HashTrieMap() {
         this.root = new BitmapIndexedNode<>(0, 0, new Object[0]);
+        this.size = 0;
     }
 
     private static final class Observer {
