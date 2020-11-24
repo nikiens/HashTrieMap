@@ -1,8 +1,9 @@
-package ru.nikiens.HashTrieMap;
+package ru.nikiens.HashTrieMap.generators;
 
 import com.google.common.collect.testing.Helpers;
 import com.google.common.collect.testing.SampleElements;
 import com.google.common.collect.testing.TestMapGenerator;
+import ru.nikiens.HashTrieMap.HashTrieMap;
 
 import java.util.ArrayList;
 import java.util.List;

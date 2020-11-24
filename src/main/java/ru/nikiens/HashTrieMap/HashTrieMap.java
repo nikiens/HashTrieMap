@@ -185,7 +185,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
             }
 
             if ((bitPos & nodeMap) != 0) {
-                BitmapIndexedNode<K, V> subNode = (BitmapIndexedNode<K, V>) getNode(getIndex(nodeMap, bitPos))
+                Node<K, V> subNode = getNode(getIndex(nodeMap, bitPos))
                         .insert(key, value, hash, shift + PARTITION_OFFSET, observer);
 
                 if (observer.isModified()) {
@@ -419,14 +419,14 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                 }
             }
 
-            K[] keys = (K[]) new Object[this.keys.length + 1];
-            V[] values = (V[]) new Object[this.values.length + 1];
+            K[] keys = (K[]) new Object[getPayloadArity() + 1];
+            V[] values = (V[]) new Object[getPayloadArity() + 1];
 
-            System.arraycopy(this.keys, 0, keys, 0, keys.length);
-            keys[this.keys.length] = key;
+            System.arraycopy(this.keys, 0, keys, 0, getPayloadArity());
+            keys[getPayloadArity()] = key;
 
-            System.arraycopy(this.values, 0, values, 0, values.length);
-            values[this.values.length] = value;
+            System.arraycopy(this.values, 0, values, 0, getPayloadArity());
+            values[getPayloadArity()] = value;
 
             observer.setModified();
             return new HashCollisionNode<>(keys, values, hash);
@@ -535,7 +535,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
         private boolean advanceToNextPayloadNode() {
             while (!nodes.isEmpty()) {
-                if (currentNodeIndex < nodes.getLast().getNodeArity()) {
+                while (currentNodeIndex < nodes.getLast().getNodeArity()) {
                     Node<K, V> next = nodes.getLast().getNode(currentNodeIndex++);
 
                     if (next.getNodeArity() != 0) {
