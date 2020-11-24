@@ -11,7 +11,8 @@ repositories {
 
 dependencies {
     testCompile 'junit:junit:4.12'
-    testCompile group: 'com.google.guava', name: 'guava-testlib', version: '28.0-jre'}
+    testCompile group: 'com.google.guava', name: 'guava-testlib', version: '30.0-jre'
+}
 
 test {
     useJUnit()
