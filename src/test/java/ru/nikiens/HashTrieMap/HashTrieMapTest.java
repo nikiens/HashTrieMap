@@ -59,11 +59,11 @@ public class HashTrieMapTest {
             for (int i = 0; i < 100000; i++) {
                 controlMap.put(HashTrieMapGenerator.getRandomString(), i);
             }
+            testingMap = testingMap.insertAll(controlMap);
         }
 
         @Test
         public void testBigDataInsertion() {
-            testingMap = testingMap.insertAll(controlMap);
             Assert.assertEquals(controlMap, testingMap);
         }
     }
