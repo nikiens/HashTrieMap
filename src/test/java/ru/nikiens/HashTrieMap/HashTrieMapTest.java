@@ -16,8 +16,6 @@ import ru.nikiens.HashTrieMap.generators.HashTrieMapGenerator;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
-import java.util.Set;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
