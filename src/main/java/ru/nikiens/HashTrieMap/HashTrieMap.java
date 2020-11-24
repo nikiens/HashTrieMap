@@ -233,7 +233,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
             }
 
             if ((bitPos & nodeMap) != 0) {
-                BitmapIndexedNode<K, V> subNode = (BitmapIndexedNode<K, V>) getNode(getIndex(nodeMap, bitPos))
+                Node<K, V> subNode = getNode(getIndex(nodeMap, bitPos))
                         .delete(key, hash, shift + PARTITION_OFFSET, observer);
 
                 if (observer.isModified()) {
@@ -242,10 +242,10 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                             throw new IllegalStateException();
 
                         case ONE: {
-                            if (!(getPayloadArity() == 0 && getNodeArity() == 2)) {
+                            if (!(getPayloadArity() == 0 && getNodeArity() == 1)) {
                                 Object[] modified = copyAndModifyContents(Operation.INLINE_ENTRY, bitPos);
-                                modified[payloadIndex] = subNode.getKey(0);
-                                modified[payloadIndex + 1] = subNode.getValue(0);
+                                modified[2 * payloadIndex] = subNode.getKey(0);
+                                modified[2 * payloadIndex + 1] = subNode.getValue(0);
 
                                 return new BitmapIndexedNode<>(nodeMap ^ bitPos, payloadMap | bitPos, modified);
                             }

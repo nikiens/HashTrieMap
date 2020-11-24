@@ -14,15 +14,17 @@ public class HashTrieMapGenerator implements TestMapGenerator<String, Integer> {
     private static final List<String> strings = new ArrayList<>();
 
     static {
-        Random random = new Random();
-
         for (int i = 0; i < 5; i++) {
-            String generated = random.ints(97, 123)
-                    .limit(50)
-                    .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
-                    .toString();
-            strings.add(generated);
+            strings.add(getRandomString());
         }
+    }
+
+    public static String getRandomString() {
+        Random random = new Random();
+        return random.ints(97, 123)
+                .limit(50)
+                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                .toString();
     }
 
     @Override
