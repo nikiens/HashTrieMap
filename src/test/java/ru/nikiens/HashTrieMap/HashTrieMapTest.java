@@ -66,5 +66,18 @@ public class HashTrieMapTest {
         public void testBigDataInsertion() {
             Assert.assertEquals(controlMap, testingMap);
         }
+
+        @Test
+        public void testBigDataRemove() {
+            String[] keys = controlMap.keySet().toArray(String[]::new);
+
+            for (int i = 25000; i < 45000; i++) {
+                String key = keys[i];
+
+                controlMap.remove(key);
+                testingMap = testingMap.delete(key);
+            }
+            Assert.assertEquals(controlMap, testingMap);
+        }
     }
 }

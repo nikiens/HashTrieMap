@@ -173,8 +173,8 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                 }
 
                 int hash1 = (getKey(payloadIndex) == null) ? 0 : getKey(payloadIndex).hashCode();
-                BitmapIndexedNode<K, V> subNode = (BitmapIndexedNode<K, V>)
-                        merge(key, value, getKey(payloadIndex), getValue(payloadIndex), hash, hash1, shift + PARTITION_OFFSET);
+                Node<K, V> subNode = merge(key, value,
+                        getKey(payloadIndex), getValue(payloadIndex), hash, hash1, shift + PARTITION_OFFSET);
 
                 observer.setModified();
 
@@ -237,7 +237,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                         .delete(key, hash, shift + PARTITION_OFFSET, observer);
 
                 if (observer.isModified()) {
-                    switch (sizePredicate()) {
+                    switch (subNode.sizePredicate()) {
                         case EMPTY:
                             throw new IllegalStateException();
 
@@ -291,8 +291,8 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                 case INLINE_ENTRY: {
                     modified = new Object[contents.length + 1];
                     System.arraycopy(contents, 0, modified, 0, payloadIndex);
-                    System.arraycopy(contents, payloadIndex, modified, payloadIndex + 2, nodeIndex - payloadIndex);
-                    System.arraycopy(contents, nodeIndex + 1, modified, nodeIndex + 2, contents.length - nodeIndex - 1);
+                    System.arraycopy(contents, payloadIndex, modified, payloadIndex + 2, nodeIndex+1 - payloadIndex);
+                    System.arraycopy(contents, nodeIndex + 2, modified, nodeIndex + 3, contents.length - nodeIndex - 2);
                     break;
                 }
                 case UNINLINE_ENTRY: {
