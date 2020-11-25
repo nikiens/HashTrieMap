@@ -20,8 +20,8 @@ import java.util.Map;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
         HashTrieMapTest.GenericTest.class,
-        HashTrieMapTest.HashCollisionTest.class,
-        HashTrieMapTest.BigDataTest.class
+        HashTrieMapTest.HashCollisionGenericTest.class,
+        HashTrieMapTest.BigDataInsertDeleteTest.class
 })
 
 public class HashTrieMapTest {
@@ -38,7 +38,7 @@ public class HashTrieMapTest {
         }
     }
 
-    public static class HashCollisionTest {
+    public static class HashCollisionGenericTest {
         public static TestSuite suite() {
             return MapTestSuiteBuilder
                     .using(new HashTrieMapCollisionGenerator())
@@ -51,8 +51,8 @@ public class HashTrieMapTest {
         }
     }
 
-    public static class BigDataTest {
-        public static final Map<String,Integer> controlMap = new HashMap<>();
+    public static class BigDataInsertDeleteTest {
+        public static final Map<String, Integer> controlMap = new HashMap<>();
         public static PersistentMap<String, Integer> testingMap = new HashTrieMap<>();
 
         static {
@@ -76,6 +76,19 @@ public class HashTrieMapTest {
 
                 controlMap.remove(key);
                 testingMap = testingMap.delete(key);
+            }
+            Assert.assertEquals(controlMap, testingMap);
+        }
+
+        @Test
+        public void testBigDataReplacement() {
+            String[] keys = controlMap.keySet().toArray(String[]::new);
+
+            for (int i = 0; i < 10; i++) {
+                String key = keys[i];
+
+                controlMap.put(key, i + 1);
+                testingMap = testingMap.insert(key, i + 1);
             }
             Assert.assertEquals(controlMap, testingMap);
         }
