@@ -46,3 +46,4 @@ jobs:
           path: build/test-results
       - codecov/upload:
           file: build/reports/jacoco/test/jacocoTestReport.xml
+          token: 3d74498c-a312-402c-9c6e-ec8e65c41f5b
