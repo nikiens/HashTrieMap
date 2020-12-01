@@ -337,23 +337,6 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                     ? new BitmapIndexedNode<>(0, payloadMap, new Object[]{key1, value1, key2, value2})
                     : new BitmapIndexedNode<>(0, payloadMap, new Object[]{key2, value2, key1, value1});
         }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            BitmapIndexedNode<?, ?> that = (BitmapIndexedNode<?, ?>) o;
-            return payloadMap == that.payloadMap &&
-                    nodeMap == that.nodeMap &&
-                    Arrays.equals(contents, that.contents);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = Objects.hash(payloadMap, nodeMap);
-            result = 31 * result + Arrays.hashCode(contents);
-            return result;
-        }
     }
 
     private static final class HashCollisionNode<K, V> extends Node<K, V> {
