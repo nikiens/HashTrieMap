@@ -467,23 +467,6 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
             return this;
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            HashCollisionNode<?, ?> that = (HashCollisionNode<?, ?>) o;
-            return hash == that.hash &&
-                    Arrays.equals(keys, that.keys) &&
-                    Arrays.equals(values, that.values);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = Objects.hash(hash);
-            result = 31 * result + Arrays.hashCode(keys);
-            result = 31 * result + Arrays.hashCode(values);
-            return result;
-        }
     }
 
     /* ------------- PersistentMap API ---------- */
