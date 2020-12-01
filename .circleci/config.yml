@@ -45,4 +45,4 @@ jobs:
       - store_test_results:
           path: build/test-results
       - codecov/upload:
-          file: { { coverage_report_filepath } }
+          file: build/reports/jacoco/jacocoTestReport.xml
