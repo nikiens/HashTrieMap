@@ -92,5 +92,10 @@ public class HashTrieMapTest {
             }
             Assert.assertEquals(controlMap, testingMap);
         }
+
+        @Test
+        public void testFoo() {
+            Assert.assertEquals(0, new HashTrieMap<>().foo());
+        }
     }
 }

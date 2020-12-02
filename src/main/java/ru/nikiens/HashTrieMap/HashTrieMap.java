@@ -466,8 +466,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
             }
             return this;
         }
-
-
+    }
 
     /* ------------- PersistentMap API ---------- */
 
@@ -590,5 +589,9 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
     @Override
     public int size() {
         return size;
+    }
+
+    public int foo() {
+       return 0;
     }
 }
