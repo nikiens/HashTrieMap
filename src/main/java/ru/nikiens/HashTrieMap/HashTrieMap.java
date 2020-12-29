@@ -204,9 +204,12 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
                 }
 
-                int hash1 = (getKey(payloadIndex) == null) ? 0 : getKey(payloadIndex).hashCode();
-                Node<K, V> subNode = merge(key, value,
-                        getKey(payloadIndex), getValue(payloadIndex), hash, hash1, shift + PARTITION_OFFSET);
+                Node<K, V> subNode = merge(
+                        key, value,
+                        getKey(payloadIndex), getValue(payloadIndex),
+                        hash, Objects.hashCode(getKey(payloadIndex)),
+                        shift + PARTITION_OFFSET
+                );
 
                 observer.setModified();
 
@@ -484,9 +487,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
     public PersistentMap<K, V> insert(K k, V v) {
         Observer observer = new Observer();
 
-        int hash = (k == null) ? 0 : k.hashCode();
-
-        Node<K, V> root = this.root.insert(k, v, hash, 0, observer);
+        Node<K, V> root = this.root.insert(k, v, Objects.hashCode(k), 0, observer);
 
         return (observer.isModified())
                 ? new HashTrieMap<>(root, (!observer.isReplaced()) ? size + 1 : size)
@@ -497,10 +498,8 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
     public PersistentMap<K, V> delete(Object o) {
         Observer observer = new Observer();
 
-        int hash = (o == null) ? 0 : o.hashCode();
-
         @SuppressWarnings("unchecked")
-        Node<K, V> root = this.root.delete((K) o, hash, 0, observer);
+        Node<K, V> root = this.root.delete((K) o, Objects.hashCode(o), 0, observer);
 
         return (!observer.isModified()) ? this : new HashTrieMap<>(root, size - 1);
     }
@@ -529,7 +528,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
             nodes.push(root);
         }
 
-        private boolean advanceToNextPayloadNode() {
+        private void advanceToNextPayloadNode() {
             while (!nodes.isEmpty()) {
                 while (currentNodeIndex < nodes.getLast().getNodeArity()) {
                     Node<K, V> next = nodes.getLast().getNode(currentNodeIndex++);
@@ -542,24 +541,27 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                         currentPayloadNode = next;
                         currentEntryIndex = 0;
 
-                        return true;
+                        return;
                     }
                 }
                 nodes.removeLast();
                 currentNodeIndex = 0;
             }
-            return false;
         }
 
         @Override
         public boolean hasNext() {
             return currentEntryIndex < currentPayloadNode.getPayloadArity()
-                    || advanceToNextPayloadNode();
+                    || currentPayloadNode.getNodeArity() != 0;
         }
 
         @Override
         public Entry<K, V> next() {
             if (!hasNext()) throw new NoSuchElementException();
+
+            if (currentEntryIndex >= currentPayloadNode.getPayloadArity()) {
+                advanceToNextPayloadNode();
+            }
 
             return new AbstractMap.SimpleImmutableEntry<>(
                     currentPayloadNode.getKey(currentEntryIndex),
@@ -646,13 +648,13 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
     @SuppressWarnings("unchecked")
     @Override
     public boolean containsKey(Object key) {
-        return root.containsKey((K) key, (key == null) ? 0 : key.hashCode(), 0);
+        return root.containsKey((K) key, Objects.hashCode(key), 0);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public V get(Object key) {
-        return root.find((K) key, (key == null) ? 0 : key.hashCode(), 0);
+        return root.find((K) key, Objects.hashCode(key), 0);
     }
 
     @Override
