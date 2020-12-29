@@ -97,7 +97,7 @@ public class HashTrieMapTest {
     }
 
     public static class HashCollisionInsertDeleteTest {
-        public static final Map<String, Integer> controlMap =
+        public final Map<String, Integer> controlMap =
                 new HashTrieMapCollisionGenerator().samples().asList().stream()
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
