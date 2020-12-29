@@ -11,6 +11,7 @@ repositories {
 }
 
 dependencies {
+    implementation 'org.jetbrains:annotations:19.0.0'
     testCompile 'junit:junit:4.12'
     testCompile group: 'com.google.guava', name: 'guava-testlib', version: '30.0-jre'
 }

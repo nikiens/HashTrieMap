@@ -1,9 +1,10 @@
 package ru.nikiens.HashTrieMap;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.Map;
@@ -64,6 +65,8 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
         abstract Node<K, V> getNode(int index);
 
+        abstract boolean containsKey(K key, int hash, int shift);
+
         abstract K getKey(int index);
 
         abstract V getValue(int index);
@@ -92,6 +95,12 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         private static final int PARTITION_BITMASK = 0b11111;
         private static final int PARTITION_OFFSET = 5;
         private static final int HASH_CODE_LENGTH = 32;
+
+        private enum Operation {
+            INSERT_ENTRY, DELETE_ENTRY,
+            INLINE_ENTRY, DEINLINE_ENTRY,
+            INSERT_VALUE, INSERT_NODE
+        }
 
         private final int payloadMap;
         private final int nodeMap;
@@ -145,13 +154,30 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         }
 
         @Override
+        boolean containsKey(K key, int hash, int shift) {
+            int bitPos = getBitPosition(hash, shift);
+
+            if ((bitPos & payloadMap) != 0) {
+                int index = getIndex(payloadMap, bitPos);
+
+                return Objects.equals(getKey(index), key);
+            }
+
+            if ((bitPos & nodeMap) != 0) {
+                return getNode(getIndex(nodeMap, bitPos)).containsKey(key, hash, shift + PARTITION_OFFSET);
+            }
+
+            return false;
+        }
+
+        @Override
         V find(K key, int hash, int shift) {
             int bitPos = getBitPosition(hash, shift);
 
             if ((bitPos & payloadMap) != 0) {
                 int index = getIndex(payloadMap, bitPos);
 
-                return (getKey(index) == key) ? getValue(index) : null;
+                return (Objects.equals(getKey(index), key)) ? getValue(index) : null;
             }
 
             if ((bitPos & nodeMap) != 0) {
@@ -184,7 +210,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
                 observer.setModified();
 
-                Object[] modified = copyAndModifyContents(Operation.UNINLINE_ENTRY, bitPos);
+                Object[] modified = copyAndModifyContents(Operation.DEINLINE_ENTRY, bitPos);
                 modified[nodeIndex - 1] = subNode;
 
                 return new BitmapIndexedNode<>(nodeMap | bitPos, payloadMap ^ bitPos, modified);
@@ -269,12 +295,6 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
             return this;
         }
 
-        private enum Operation {
-            INSERT_ENTRY, DELETE_ENTRY,
-            INLINE_ENTRY, UNINLINE_ENTRY,
-            INSERT_VALUE, INSERT_NODE
-        }
-
         private Object[] copyAndModifyContents(Operation operation, int bitPos) {
             int payloadIndex = 2 * getIndex(payloadMap, bitPos);
             int nodeIndex = contents.length - 2 - getIndex(nodeMap, bitPos);
@@ -301,7 +321,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                     System.arraycopy(contents, nodeIndex + 2, modified, nodeIndex + 3, contents.length - nodeIndex - 2);
                     break;
                 }
-                case UNINLINE_ENTRY: {
+                case DEINLINE_ENTRY: {
                     modified = new Object[contents.length - 1];
                     System.arraycopy(contents, 0, modified, 0, payloadIndex);
                     System.arraycopy(contents, payloadIndex + 2, modified, payloadIndex, nodeIndex - payloadIndex);
@@ -319,7 +339,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         @SuppressWarnings("unchecked")
         private Node<K, V> merge(K key1, V value1, K key2, V value2, int hash1, int hash2, int shift) {
             if (shift > HASH_CODE_LENGTH) {
-                return new HashCollisionNode<>((K[]) new Object[]{key1, key2}, (V[]) new Object[]{value1, value2}, hash1);
+                return new HashCollisionNode<>((K[]) new Object[]{key1, key2}, (V[]) new Object[]{value1, value2});
             }
 
             int mask1 = mask(hash1, shift);
@@ -343,12 +363,9 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         private final K[] keys;
         private final V[] values;
 
-        private final int hash;
-
-        private HashCollisionNode(K[] keys, V[] values, int hash) {
+        private HashCollisionNode(K[] keys, V[] values) {
             this.keys = keys;
             this.values = values;
-            this.hash = hash;
         }
 
         @Override
@@ -377,6 +394,16 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         }
 
         @Override
+        boolean containsKey(K key, int hash, int shift) {
+            for (int i = 0; i < getPayloadArity(); i++) {
+                if (keys[i].equals(key)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
         V find(K key, int hash, int shift) {
             for (int i = 0; i < getPayloadArity(); i++) {
                 if (keys[i].equals(key)) {
@@ -399,7 +426,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                         newValues[i] = value;
 
                         observer.setReplaced();
-                        return new HashCollisionNode<>(keys, newValues, hash);
+                        return new HashCollisionNode<>(keys, newValues);
                     }
                 }
             }
@@ -414,7 +441,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
             values[getPayloadArity()] = value;
 
             observer.setModified();
-            return new HashCollisionNode<>(keys, values, hash);
+            return new HashCollisionNode<>(keys, values);
         }
 
         @SuppressWarnings("unchecked")
@@ -444,7 +471,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
                     System.arraycopy(this.values, 0, values, 0, i);
                     System.arraycopy(this.values, i + 1, values, i, keys.length - i);
 
-                    return new HashCollisionNode<>(keys, values, hash);
+                    return new HashCollisionNode<>(keys, values);
                 }
             }
             return this;
@@ -489,7 +516,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         return dst;
     }
 
-    /* ---------------- Iterator ---------------- */
+    /* ---------------- Iterators ---------------- */
 
     private class EntryIterator implements Iterator<Map.Entry<K, V>> {
         private final Deque<Node<K, V>> nodes = new ArrayDeque<>();
@@ -541,11 +568,27 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         }
     }
 
+    private class KeyIterator implements Iterator<K> {
+        private final Iterator<Map.Entry<K,V>> i = entrySet().iterator();
+
+        @Override
+        public boolean hasNext() {
+            return i.hasNext();
+        }
+
+        @Override
+        public K next() {
+            return i.next().getKey();
+        }
+    }
+
     /* ----------------- Map API ---------------- */
 
     private EntrySet entrySet;
+    private KeySet keySet;
 
     @Override
+    @NotNull
     public Set<Entry<K, V>> entrySet() {
         EntrySet es = entrySet;
         return (es != null) ? es : (entrySet = new EntrySet());
@@ -553,6 +596,7 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
     private class EntrySet extends AbstractSet<Map.Entry<K, V>> {
         @Override
+        @NotNull
         public Iterator<Entry<K, V>> iterator() {
             return new EntryIterator();
         }
@@ -561,6 +605,48 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
         public int size() {
             return HashTrieMap.this.size();
         }
+
+        @Override
+        public boolean contains(Object o) {
+            if (!(o instanceof Map.Entry)) return false;
+
+            Map.Entry<?,?> entry = (Entry<?, ?>) o;
+            Object value = HashTrieMap.this.get(entry.getKey());
+
+            return HashTrieMap.this.containsKey(entry.getKey())
+                    && Objects.equals(entry.getValue(), value);
+        }
+    }
+
+    @Override
+    @NotNull
+    public Set<K> keySet() {
+        KeySet ks = keySet;
+        return (ks != null) ? ks : (keySet = new KeySet());
+    }
+
+    private class KeySet extends AbstractSet<K> {
+        @Override
+        @NotNull
+        public Iterator<K> iterator() {
+            return new KeyIterator();
+        }
+
+        @Override
+        public int size() {
+            return HashTrieMap.this.size();
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return HashTrieMap.this.containsKey(o);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public boolean containsKey(Object key) {
+        return root.containsKey((K) key, (key == null) ? 0 : key.hashCode(), 0);
     }
 
     @SuppressWarnings("unchecked")
