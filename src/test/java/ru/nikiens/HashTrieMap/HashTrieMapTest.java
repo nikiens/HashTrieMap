@@ -16,12 +16,14 @@ import ru.nikiens.HashTrieMap.generators.HashTrieMapGenerator;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
         HashTrieMapTest.GenericTest.class,
         HashTrieMapTest.HashCollisionGenericTest.class,
-        HashTrieMapTest.BigDataInsertDeleteTest.class
+        HashTrieMapTest.RegularNodeInsertDeleteTest.class,
+        HashTrieMapTest.HashCollisionInsertDeleteTest.class
 })
 
 public class HashTrieMapTest {
@@ -51,7 +53,7 @@ public class HashTrieMapTest {
         }
     }
 
-    public static class BigDataInsertDeleteTest {
+    public static class RegularNodeInsertDeleteTest {
         public static final Map<String, Integer> controlMap = new HashMap<>();
         public static PersistentMap<String, Integer> testingMap = new HashTrieMap<>();
 
@@ -63,12 +65,12 @@ public class HashTrieMapTest {
         }
 
         @Test
-        public void testBigDataInsertion() {
+        public void testRegularNodeInsertion() {
             Assert.assertEquals(controlMap, testingMap);
         }
 
         @Test
-        public void testBigDataRemove() {
+        public void testRegularNodeRemove() {
             String[] keys = controlMap.keySet().toArray(String[]::new);
 
             for (int i = 25000; i < 45000; i++) {
@@ -81,7 +83,7 @@ public class HashTrieMapTest {
         }
 
         @Test
-        public void testBigDataReplacement() {
+        public void testRegularNodeReplacement() {
             String[] keys = controlMap.keySet().toArray(String[]::new);
 
             for (int i = 0; i < 10; i++) {
@@ -92,10 +94,45 @@ public class HashTrieMapTest {
             }
             Assert.assertEquals(controlMap, testingMap);
         }
+    }
+
+    public static class HashCollisionInsertDeleteTest {
+        public static final Map<String, Integer> controlMap =
+                new HashTrieMapCollisionGenerator().samples().asList().stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        public PersistentMap<Object, Object> testingMap =
+                new HashTrieMap<>().insertAll(controlMap);
 
         @Test
-        public void testFoo() {
-            Assert.assertEquals(0, new HashTrieMap<>().foo());
+        public void testHashCollisionNodeInsertion() {
+            Assert.assertEquals(controlMap, testingMap);
+        }
+
+        @Test
+        public void testHashCollisionNodeRemove() {
+            String[] keys = controlMap.keySet().toArray(String[]::new);
+
+            for (int i = 2; i < 5; i++) {
+                String key = keys[i];
+
+                controlMap.remove(key);
+                testingMap = testingMap.delete(key);
+            }
+            Assert.assertEquals(controlMap, testingMap);
+        }
+
+        @Test
+        public void testHashCollisionNodeReplacement() {
+            String[] keys = controlMap.keySet().toArray(String[]::new);
+
+            for (int i = 0; i < 2; i++) {
+                String key = keys[i];
+
+                controlMap.put(key, i + 1);
+                testingMap = testingMap.insert(key, i + 1);
+            }
+            Assert.assertEquals(controlMap, testingMap);
         }
     }
 }

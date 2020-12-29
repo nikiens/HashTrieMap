@@ -455,11 +455,11 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
 
                     K[] keys = (K[]) new Object[getPayloadArity() - 1];
                     System.arraycopy(this.keys, 0, keys, 0, i);
-                    System.arraycopy(this.keys, i + 1, keys, i, keys.length - i - 1);
+                    System.arraycopy(this.keys, i + 1, keys, i, keys.length - i);
 
                     V[] values = (V[]) new Object[getPayloadArity() - 1];
                     System.arraycopy(this.values, 0, values, 0, i);
-                    System.arraycopy(this.values, i + 1, values, i, keys.length - i - 1);
+                    System.arraycopy(this.values, i + 1, values, i, keys.length - i);
 
                     return new HashCollisionNode<>(keys, values, hash);
                 }
@@ -589,9 +589,5 @@ public class HashTrieMap<K, V> extends AbstractPersistentMap<K, V>
     @Override
     public int size() {
         return size;
-    }
-
-    public int foo() {
-       return 0;
     }
 }
